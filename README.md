@@ -41,18 +41,6 @@ Uninstall **agent**
 
     /usr/local/bin/k3s-agent-uninstall.sh
 
-## Add monitoring
-This deploy a stack with prometheus-operator, grafana dashboards, and some rules.
-
-    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-    helm repo update
-    kubectl create namespace monitoring
-    helm install [RELEASE_NAME] --namespace monitoring prometheus-community/kube-prometheus-stack
-    helm uninstall [RELEASE_NAME] --namespace monitoring
-Add Grafana Ingress
-
-    kubectl apply -f grafana.yaml
-
 ## Add cert-manager
 Needed for auto-generate letsencrypt certificates.
 
@@ -66,6 +54,18 @@ Deploy ClusterIssuer
 
     kubectl apply -f prod_issuer.yaml
     kubectl apply -f staging_issuer.yaml
+
+## Add monitoring
+This deploy a stack with prometheus-operator, grafana dashboards, and some rules.
+
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+    helm repo update
+    kubectl create namespace monitoring
+    helm install [RELEASE_NAME] --namespace monitoring prometheus-community/kube-prometheus-stack
+    helm uninstall [RELEASE_NAME] --namespace monitoring
+Add Grafana Ingress
+
+    kubectl apply -f grafana.yaml
 
 ## Add hello-app
 
