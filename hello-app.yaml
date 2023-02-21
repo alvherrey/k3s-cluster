@@ -1,0 +1,100 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-ingress
+  namespace: hello-app
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  tls:
+  - hosts:
+    - alvarocloud.com
+    secretName: hello-tls
+  rules:
+    - host: alvarocloud.com
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: hello-service
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hello-ingress-redirect
+  namespace: hello-app
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: hello-app-redirect@kubernetescrd
+spec:
+  rules:
+    - host: alvarocloud.com
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: hello-service
+                port:
+                  number: 80
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect
+  namespace: hello-app
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+  namespace: hello-app
+  labels:
+    app: hello
+spec:
+  type: ClusterIP
+  selector:
+    app: hello
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-deployment
+  namespace: hello-app
+  labels:
+    app: hello
+spec:
+  selector:
+    matchLabels:
+      app: hello
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: hello
+    spec:
+      containers:
+      - name: hello-app
+        image: chris7444/hello-app:short-v5
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 200m
