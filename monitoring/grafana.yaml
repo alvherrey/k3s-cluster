@@ -21,7 +21,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: my-release-grafana
+                name: prometheus-grafana
                 port:
                   number: 80
 ---
@@ -43,7 +43,7 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: my-release-grafana
+                name: prometheus-grafana
                 port:
                   number: 80
 ---

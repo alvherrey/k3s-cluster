@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    io.kompose.service: homeassistant-config
+  name: homeassistant-config
+spec:
+  capacity:
+    storage: 10Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: iscsi
+  persistentVolumeReclaimPolicy: Retain
+  iscsi:
+    targetPortal: 192.168.x.x
+    iqn: iqn.1991-05.com.microsoft:gamma-gamma-1-target
+    lun: 3
+    fsType: "ext4"
+  claimRef:
+     namespace: default
+     name: homeassistant-config
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  labels:
+    io.kompose.service: homeassistant-config
+  name: homeassistant-config
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.service: homeassistant
+  name: homeassistant
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: homeassistant
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.service: homeassistant
+    spec:
+      containers:
+      - env:
+        - name: PYTHONWARNINGS
+          value: ignore:Unverified HTTPS request
+        image: homeassistant/home-assistant
+        name: homeassistant
+        ports:
+        - containerPort: 1900
+          protocol: UDP
+        - containerPort: 5353
+          protocol: UDP
+        - containerPort: 8123
+        volumeMounts:
+        - mountPath: /config
+          name: homeassistant-config
+        resources:
+          requests:
+            memory: 500Mi
+            cpu: 250m
+          limits:
+            memory: 1000Mi
+            cpu: 500m
+      volumes:
+      - name: homeassistant-config
+        persistentVolumeClaim:
+          claimName: homeassistant-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: homeassistant
+  name: homeassistant-tcp
+  annotations:
+    metallb.universe.tf/allow-shared-ip: "true"
+spec:
+  ports:
+  - name: "http"
+    port: 80
+    targetPort: 8123
+  selector:
+    io.kompose.service: homeassistant
+  type: LoadBalancer
+  loadBalancerIP: 192.168.x.x
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: homeassistant
+  name: homeassistant-udp
+  annotations:
+    metallb.universe.tf/allow-shared-ip: "true"
+spec:
+  ports:
+  - name: "upnp"
+    port: 1900
+    protocol: UDP
+    targetPort: 1900
+  - name: "mdns"
+    port: 5353
+    protocol: UDP
+    targetPort: 5353
+  selector:
+    io.kompose.service: homeassistant
+  type: LoadBalancer
+  loadBalancerIP: 192.168.

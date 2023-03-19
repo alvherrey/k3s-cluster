@@ -1,0 +1,120 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: home-assistant-ingress
+  namespace: home-assistant
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  # tls:
+  # - hosts:
+  #   - home.alvarocloud.com
+  #   secretName: home-assistant-tls
+  rules:
+    - host: home.alvarocloud.com
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: home-assistant-service
+                port:
+                  number: 80
+---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: home-assistant-ingress-redirect
+#   namespace: home-assistant
+#   annotations:
+#     kubernetes.io/ingress.class: traefik
+#     traefik.ingress.kubernetes.io/router.entrypoints: web
+#     traefik.ingress.kubernetes.io/router.middlewares: home-assistant-redirect@kubernetescrd
+# spec:
+#   rules:
+#     - host: home.alvarocloud.com
+#       http:
+#         paths:
+#           - path: /
+#             pathType: ImplementationSpecific
+#             backend:
+#               service:
+#                 name: home-assistant-service
+#                 port:
+#                   number: 80
+# ---
+# apiVersion: traefik.containo.us/v1alpha1
+# kind: Middleware
+# metadata:
+#   name: redirect
+#   namespace: home-assistant
+# spec:
+#   redirectScheme:
+#     scheme: https
+#     permanent: true
+# ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: home-assistant-service
+  namespace: home-assistant
+  labels:
+    app: home-assistant
+spec:
+  type: ClusterIP
+  selector:
+    app: home-assistant
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8123
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: home-assistant-deployment
+  namespace: home-assistant
+  labels:
+    app: home-assistant
+spec:
+  selector:
+    matchLabels:
+      app: home-assistant
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: home-assistant
+    spec:
+      containers:
+      - name: home-assistant
+        image: ghcr.io/home-assistant/home-assistant:stable
+        ports:
+        - containerPort: 8123
+        volumeMounts:
+          - mountPath: "/config"
+            name: ha-storage
+      - name: mysql
+        image: mysql:latest
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: mysql-recorder-pass
+                key: password
+        volumeMounts:
+          - name: ha-mysql-storage
+            mountPath: /var/lib/mysql
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-recorder-pass
+  namespace: home-assistant
+type: Opaque
+data:
+  password: Temporal2023

@@ -63,6 +63,9 @@ This deploy a stack with prometheus-operator, grafana dashboards, and some rules
     kubectl create namespace monitoring
     helm install [RELEASE_NAME] --namespace monitoring prometheus-community/kube-prometheus-stack
     helm uninstall [RELEASE_NAME] --namespace monitoring
+Customizing the Chart Before Installing
+
+    helm show values prometheus-community/kube-prometheus-stack > monitoring/values.yaml
 Add Grafana Ingress
 
     kubectl apply -f grafana.yaml
